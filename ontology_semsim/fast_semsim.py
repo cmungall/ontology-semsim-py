@@ -1,4 +1,7 @@
-import semsim
+from typing import Optional, Set, List, Union, Dict, Any
+from ontology_semsim.semsim import SemSimEngine, Cls, RelationPattern
+from functools import lru_cache
+
 """
 Implements a semsim emngine using fast(?) bitwise operations
 
@@ -47,9 +50,8 @@ class FastSemSimEngine(SemSimEngine):
         self.impl = engine
         self.cls_to_pos_map = {}
         self.pos_to_cls_ix = []
-        self.max_pos = -1
     
-    def cls_bm(c : Cls) -> Pos:
+    def cls_bm(self, c : Cls) -> Pos:
         """
         Given a class, return its bitmap index
         """
@@ -57,10 +59,9 @@ class FastSemSimEngine(SemSimEngine):
             return self.cls_to_pos_map[c]
         else:
             # does not exist: add it
-            self.max_pos += 1
-            p = self.max_pos
+            p = len(self.cls_to_pos_map) + 1
             self.cls_to_pos_map[c] = p
-            self.pos_to_cls_ix[p] = c
+            self.pos_to_cls_ix.append(c)
             return p
 
 
@@ -69,37 +70,37 @@ class FastSemSimEngine(SemSimEngine):
         # in order of IC
         return
 
-    def bm_jaccard(xi: Bitmap, yi: Bitmap) -> float:
+    def bm_jaccard(self, xi: Bitmap, yi: Bitmap) -> float:
         """
         Jaccard similarity between two sets
         """
-        return self.len_bm(set1 & set2)/self.len_bm(set1 | set2)
+        return len_bm(xi & yi)/len_bm(xi | yi)
     
-    def cls_wise_jaccard(x : Cls, y : Cls, rel=None : RelationPattern) -> float :
+    def cls_wise_jaccard(self, x : Cls, y : Cls, rel : RelationPattern = None) -> float :
         """
         Jaccard similarity between two ontology classes
         """
-        xa = self.ancestors_bm(x, rel, True)
-        ya = self.ancestors_bm(y, rel, True)
+        xa = self.ancestors_bm(x, rel, reflexive=True)
+        ya = self.ancestors_bm(y, rel, reflexive=True)
         return self.bm_jaccard(xa, ya)
 
-    def mrca(x : Cls, y : Cls, rel : RelationPattern = None) -> Set[Cls] :
+    def mrca(self, x : Cls, y : Cls, rel : RelationPattern = None) -> Set[Cls] :
         # delegate
-        return impl.mrca(x, y, rel)
+        return self.impl.mrca(x, y, rel)
                
-    def ancestors(c : Cls, rel=None : RelationPattern) -> Set[Cls]:
+    def ancestors(self, c : Cls, rel : RelationPattern = None, reflexive : bool = False) -> Set[Cls]:
         # delegate
-        return impl.ancestors(c, rel, reflexive)
+        return self.impl.ancestors(c, rel, reflexive)
 
     # private: ancestors as bitmap
-    def ancestors_bm(c : Cls, rel=None : RelationPattern) -> Bitmap:
-        ancs = impl.ancestors(c, rel, reflexive)
+    def ancestors_bm(self, c : Cls, rel : RelationPattern = None, reflexive : bool = False) -> Bitmap:
+        ancs = self.impl.ancestors(c, rel, reflexive)
         bm = 0 # Bitmap
         for a in ancs:
-            bm = bm | self.cls_bm(a)
+            bm = bm | 2**self.cls_bm(a)
         return bm
 
-    def parents(c : Cls, rel=None : RelationPattern) -> Set[Cls]:
+    def parents(self, c : Cls, rel : RelationPattern = None) -> Set[Cls]:
         # delegate
-        return impl.parents(c, rel)
+        return self.impl.parents(c, rel)
         
