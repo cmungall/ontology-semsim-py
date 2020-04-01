@@ -1,4 +1,5 @@
-from typing import Optional, Set, List, Union, Dict, Any, Boolean
+from typing import Optional, Set, List, Union, Dict, Any
+from functools import lru_cache
 
 Cls = str
 RelationPattern = str
@@ -22,7 +23,7 @@ class SemSimEngine:
         """
         return len(set1 & set2)/len(set1 | set2)
     
-    def cls_wise_jaccard(x : Cls, y : Cls, rel=None : RelationPattern) -> float :
+    def cls_wise_jaccard(x : Cls, y : Cls, rel : RelationPattern = None) -> float :
         """
         Jaccard similarity between two ontology classes
         """
@@ -30,7 +31,7 @@ class SemSimEngine:
         ya = self.ancestors(y, rel, True)
         return self.set_jaccard(xa, ya)
 
-    def mrca(x : Cls, y : Cls, rel=None : RelationPattern) -> Set[Cls] :
+    def mrca(x : Cls, y : Cls, rel : RelationPattern = None) -> Set[Cls] :
         """
         Most Recent Common Ancestor between two ontology classes
         """
@@ -42,9 +43,14 @@ class SemSimEngine:
             mrcas -= self.ancestors(a, rel, False)
         return mrcas
 
-    @lru_cache
-    def ancestors(c : Cls, rel=None : RelationPattern, reflexive=False : Boolean) -> Set[Cls] :
-        ancs = set() : Set[Cls]
+    @lru_cache()
+    def ancestors(c : Cls, rel : RelationPattern = None, reflexive : bool =False) -> Set[Cls] :
+        """
+        All ancestors for a class, overspecified relations
+
+        This is the transitive closure of parents
+        """
+        ancs = set() # Set[Cls]
         stk = [c]
         while len(stk) > 0:
             x = stk.pop()
@@ -56,6 +62,10 @@ class SemSimEngine:
             ancs += {c}
         return ancs
 
-    def parents(c : Cls, rel=None : RelationPattern) -> Set[Cls]:
+    def parents(c : Cls, rel : RelationPattern = None) -> Set[Cls]:
+        """
+        direct parents
+        """
+        # this should be implemented in a subclass
         return set()
     
