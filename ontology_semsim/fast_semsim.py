@@ -28,7 +28,7 @@ def len_bm(bm : Bitmap) -> int:
         bm = bm >> STEP
     return len_bm
 
-@lru_cache()
+@lru_cache(maxsize=None)
 def len_bm_lo(bm : Bitmap) -> int:
     MASK = 2 ** STEP -1
     bm_lo = bm & MASK
@@ -64,6 +64,13 @@ class FastSemSimEngine(SemSimEngine):
             self.pos_to_cls_ix.append(c)
             return p
 
+    def cls_set(self) -> Set[Cls]:
+        # delegate
+        return self.impl.cls_set()
+
+    def label(self, c : Cls) -> str:
+        # delegate
+        return self.impl.label(c)
 
     def create_index() :
         # todo: operations are more efficient if we pre-index all classes
@@ -93,6 +100,7 @@ class FastSemSimEngine(SemSimEngine):
         return self.impl.ancestors(c, rel, reflexive)
 
     # private: ancestors as bitmap
+    @lru_cache(maxsize=None)
     def ancestors_bm(self, c : Cls, rel : RelationPattern = None, reflexive : bool = False) -> Bitmap:
         ancs = self.impl.ancestors(c, rel, reflexive)
         bm = 0 # Bitmap
@@ -103,4 +111,19 @@ class FastSemSimEngine(SemSimEngine):
     def parents(self, c : Cls, rel : RelationPattern = None) -> Set[Cls]:
         # delegate
         return self.impl.parents(c, rel)
+        
+    def cls_overlap_vs_mrca(self, x : Cls, y : Cls, rel : RelationPattern = None):
+        ovl = self.ancestors_bm(x, rel, reflexive=True) & self.ancestors_bm(y, rel, reflexive=True)
+        mrcas = self.mrca(x,y, rel)
+
+        best_j = 0
+        best_mrca = None
+        
+        for mrca in mrcas:
+            ancs = self.ancestors_bm(mrca, rel, reflexive=True)
+            mj = len_bm(ancs & ovl) / len_bm(ancs | ovl)
+            if mj > best_j:
+                best_j = mj
+                best_mrca = mrca
+        return (best_j, best_mrca)
         

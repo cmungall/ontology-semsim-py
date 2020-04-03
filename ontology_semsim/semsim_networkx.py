@@ -15,3 +15,4 @@ class NetworkxSemSimEngine(SemSimEngine):
         """
         # TODO rel
         return set(self.graph.predecessors(c))
+

@@ -2,7 +2,8 @@ from typing import Optional, Set, List, Union, Dict, Any
 from functools import lru_cache
 
 Cls = str
-RelationPattern = str
+RelationPattern = Union[str, Set[str]]   # note frozenset should be used
+Relation = str
 
 def set_wise_jaccard(set1: Set, set2: Set) -> float:
     """
@@ -31,6 +32,14 @@ class SemSimEngine:
         ya = self.ancestors(y, rel, True)
         return set_wise_jaccard(xa, ya)
 
+    def subsumed_by_jaccard(self, x : Cls, y : Cls, rel : RelationPattern = None) -> float :
+        """
+        Extent to which x is subsumed by y
+        """
+        xa = self.ancestors(x, rel, True)
+        ya = self.ancestors(y, rel, True)
+        return len(xa & ya) / len(xa)
+        
     def mrca(self, x : Cls, y : Cls, rel : RelationPattern = None) -> Set[Cls] :
         """
         Most Recent Common Ancestor between two ontology classes
@@ -43,7 +52,7 @@ class SemSimEngine:
             mrcas -= self.ancestors(a, rel, False)
         return mrcas
 
-    @lru_cache()
+    @lru_cache(maxsize=None)
     def ancestors(self, c : Cls, rel : RelationPattern = None, reflexive : bool =False) -> Set[Cls] :
         """
         All ancestors for a class, overspecified relations
@@ -70,4 +79,16 @@ class SemSimEngine:
         """
         # this should be implemented in a subclass
         return set()
+
+    def relmatch(self, r : Relation, rq : RelationPattern) -> bool:
+        if rq is None:
+            return True
+        if isinstance(rq, frozenset):
+            return r in rq
+        if isinstance(rq, set):
+            return r in rq
+        if isinstance(rq, list):
+            return r in rq
+        return r == rq
+
     
